@@ -2,7 +2,7 @@ name: Telegram Bot Fast
 
 on:
   schedule:
-    - cron: '*/1 * * * *'  # Каждую минуту
+    - cron: '*/1 * * * *'
   workflow_dispatch:
 
 jobs:
@@ -24,34 +24,23 @@ jobs:
         GOOGLE_CREDS_JSON: ${{ secrets.GOOGLE_CREDS_JSON }}
       run: |
         echo "🤖 ЗАПУСК БОТА КАЖДУЮ МИНУТУ"
-        
-        # Пишем фиксированный код бота
-        cat > bot_runner.py << 'EOF'
-#!/usr/bin/env python3
+        python -c "
 import os
 import telebot
-import gspread
 import json
 from datetime import datetime
-from google.oauth2.service_account import Credentials
 
-print("="*50)
-print("🤖 БОТ 'ДАНИЛА МАСТЕР' ЗАПУЩЕН")
-print("="*50)
+print('='*50)
+print('🤖 БОТ ДАНИЛА МАСТЕР ЗАПУЩЕН')
+print('='*50)
 
-# Настройки
-BOT_TOKEN = "8133979508:AAERCJ0vygaJ-eSymRGEk1w5kzRZrp7SGi8"
+BOT_TOKEN = '8133979508:AAERCJ0vygaJ-eSymRGEk1w5kzRZrp7SGi8'
 ADMIN_IDS = [5537549230]
-SPREADSHEET_ID = "1H6gkSXURYSWvXJFtjT8m7ESLvgFluOiR0g2wqrnz2MM"
-GOOGLE_CREDS_JSON = os.getenv("GOOGLE_CREDS_JSON", "")
 
-print("✅ Все настройки загружены")
-
-# Создаем бота
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# Получаем последний update_id из файла
-def get_last_offset():
+# Получаем offset
+def get_offset():
     try:
         if os.path.exists('/tmp/last_offset.txt'):
             with open('/tmp/last_offset.txt', 'r') as f:
@@ -60,71 +49,49 @@ def get_last_offset():
         pass
     return None
 
-# Сохраняем update_id
-def save_last_offset(offset):
+def save_offset(offset):
     try:
         with open('/tmp/last_offset.txt', 'w') as f:
             f.write(str(offset))
     except:
         pass
 
-# Проверяем админа
-def is_admin(user_id):
-    return user_id in ADMIN_IDS
+offset = get_offset()
+print(f'📊 Offset: {offset}')
 
-# Основная функция
-def main():
-    # Получаем offset
-    offset = get_last_offset()
-    if offset:
-        print(f"📊 Last offset: {offset}")
-    else:
-        print("📊 First run, starting from beginning")
-        offset = None
+try:
+    updates = bot.get_updates(offset=offset, timeout=5)
+    print(f'📨 Получено сообщений: {len(updates)}')
     
-    try:
-        # Получаем обновления
-        updates = bot.get_updates(offset=offset, timeout=5, allowed_updates=["message"])
-        print(f"📨 Получено сообщений: {len(updates)}")
+    if updates:
+        new_offset = updates[-1].update_id + 1
+        save_offset(new_offset)
         
-        if updates:
-            # Сохраняем новый offset
-            new_offset = updates[-1].update_id + 1
-            save_last_offset(new_offset)
-            
-            # Обрабатываем каждое сообщение
-            for update in updates:
-                if update.message and update.message.text:
-                    msg = update.message
-                    text = msg.text.strip()
-                    user_id = msg.from_user.id
-                    chat_id = msg.chat.id
-                    
-                    print(f"👤 User {user_id}: {text}")
-                    
-                    # Проверяем админа
-                    if is_admin(user_id):
-                        if text == "/start":
-                            bot.send_message(chat_id, 
-                                "🦷 *Бот Данила Мастер*\n\n"
-                                "✅ Сообщение получено!\n"
-                                "📅 " + datetime.now().strftime("%d.%m.%Y %H:%M"),
-                                parse_mode="Markdown")
-                        else:
-                            bot.send_message(chat_id, 
-                                f"✅ Получено: {text}\n"
-                                f"🕐 {datetime.now().strftime('%H:%M:%S')}")
+        for update in updates:
+            if update.message and update.message.text:
+                msg = update.message
+                text = msg.text.strip()
+                user_id = msg.from_user.id
+                chat_id = msg.chat.id
+                
+                print(f'👤 User {user_id}: {text}')
+                
+                if user_id in ADMIN_IDS:
+                    if text == '/start':
+                        bot.send_message(chat_id,
+                            '🦷 *Бот Данила Мастер*\\n\\n'
+                            '✅ Сообщение получено!\\n'
+                            '📅 ' + datetime.now().strftime('%d.%m.%Y %H:%M'),
+                            parse_mode='Markdown')
                     else:
-                        bot.send_message(chat_id, "❌ Доступ только для администратора")
-        
-        print("✅ Обработка завершена")
-        
-    except Exception as e:
-        print(f"❌ Ошибка: {e}")
-
-if __name__ == "__main__":
-    main()
-EOF
-
-        # Запускаем бота
-        python bot_runner.py
+                        bot.send_message(chat_id,
+                            f'✅ Получено: {text}\\n'
+                            f'🕐 {datetime.now().strftime('%H:%M:%S')}')
+                else:
+                    bot.send_message(chat_id, '❌ Доступ только для администратора')
+    
+    print('✅ Обработка завершена')
+    
+except Exception as e:
+    print(f'❌ Ошибка: {e}')
+        "
