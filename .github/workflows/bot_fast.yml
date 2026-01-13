@@ -1,0 +1,34 @@
+name: Telegram Bot Fast
+
+on:
+  schedule:
+    - cron: '*/1 * * * *'  # КАЖДУЮ МИНУТУ!
+  workflow_dispatch:
+
+jobs:
+  fast-bot:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install deps
+      run: pip install pyTelegramBotAPI gspread google-auth
+      
+    - name: Run bot 3 times
+      env:
+        GOOGLE_CREDS_JSON: ${{ secrets.GOOGLE_CREDS_JSON }}
+      run: |
+        echo "🚀 ЗАПУСК БОТА КАЖДУЮ МИНУТУ"
+        for i in {1..3}; do
+          echo "👉 Запуск $i/3..."
+          python bot.py
+          if [ $i -lt 3 ]; then
+            echo "⏱️ Ждем 20 секунд..."
+            sleep 20
+          fi
+        done
