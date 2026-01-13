@@ -8,26 +8,21 @@ on:
 jobs:
   fast-bot:
     runs-on: ubuntu-latest
-    
     steps:
-    - uses: actions/checkout@v3
-    
-    - uses: actions/setup-python@v4
-      with:
-        python-version: '3.9'
-        
-    - name: Install dependencies
-      run: pip install pyTelegramBotAPI gspread google-auth
-      
-    - name: Run bot
-      env:
-        GOOGLE_CREDS_JSON: ${{ secrets.GOOGLE_CREDS_JSON }}
-      run: |
-        echo "🤖 ЗАПУСК БОТА КАЖДУЮ МИНУТУ"
-        python -c "
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+      - name: Install dependencies
+        run: pip install pyTelegramBotAPI gspread google-auth
+      - name: Run bot
+        env:
+          GOOGLE_CREDS_JSON: ${{ secrets.GOOGLE_CREDS_JSON }}
+        run: |
+          echo "🤖 ЗАПУСК БОТА КАЖДУЮ МИНУТУ"
+          python -c "
 import os
 import telebot
-import json
 from datetime import datetime
 
 print('='*50)
@@ -39,7 +34,6 @@ ADMIN_IDS = [5537549230]
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
-# Получаем offset
 def get_offset():
     try:
         if os.path.exists('/tmp/last_offset.txt'):
@@ -61,7 +55,7 @@ print(f'📊 Offset: {offset}')
 
 try:
     updates = bot.get_updates(offset=offset, timeout=5)
-    print(f'📨 Получено сообщений: {len(updates)}')
+    print(f'📨 Сообщений: {len(updates)}')
     
     if updates:
         new_offset = updates[-1].update_id + 1
@@ -78,20 +72,14 @@ try:
                 
                 if user_id in ADMIN_IDS:
                     if text == '/start':
-                        bot.send_message(chat_id,
-                            '🦷 *Бот Данила Мастер*\\n\\n'
-                            '✅ Сообщение получено!\\n'
-                            '📅 ' + datetime.now().strftime('%d.%m.%Y %H:%M'),
-                            parse_mode='Markdown')
+                        bot.send_message(chat_id, '🦷 *Бот Данила Мастер*\\n\\n✅ Сообщение получено!\\n📅 ' + datetime.now().strftime('%d.%m.%Y %H:%M'), parse_mode='Markdown')
                     else:
-                        bot.send_message(chat_id,
-                            f'✅ Получено: {text}\\n'
-                            f'🕐 {datetime.now().strftime('%H:%M:%S')}')
+                        bot.send_message(chat_id, f'✅ Получено: {text}\\n🕐 {datetime.now().strftime("%H:%M:%S")}')
                 else:
                     bot.send_message(chat_id, '❌ Доступ только для администратора')
     
-    print('✅ Обработка завершена')
+    print('✅ Готово')
     
 except Exception as e:
     print(f'❌ Ошибка: {e}')
-        "
+          "
