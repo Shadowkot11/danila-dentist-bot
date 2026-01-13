@@ -2,11 +2,11 @@ name: Telegram Bot Fast
 
 on:
   schedule:
-    - cron: '*/2 * * * *'
+    - cron: '*/1 * * * *'
   workflow_dispatch:
 
 jobs:
-  run-bot:
+  fast-bot:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
