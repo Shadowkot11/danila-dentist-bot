@@ -2,7 +2,7 @@ name: Telegram Bot Fast
 
 on:
   schedule:
-    - cron: '*/1 * * * *'  # КАЖДУЮ МИНУТУ!
+    - cron: '*/1 * * * *'  # КАЖДУЮ МИНУТУ
   workflow_dispatch:
 
 jobs:
@@ -16,19 +16,101 @@ jobs:
       with:
         python-version: '3.9'
         
-    - name: Install deps
+    - name: Install dependencies
       run: pip install pyTelegramBotAPI gspread google-auth
       
-    - name: Run bot 3 times
+    - name: Run bot with offset
       env:
         GOOGLE_CREDS_JSON: ${{ secrets.GOOGLE_CREDS_JSON }}
       run: |
-        echo "🚀 ЗАПУСК БОТА КАЖДУЮ МИНУТУ"
-        for i in {1..3}; do
-          echo "👉 Запуск $i/3..."
-          python bot.py
-          if [ $i -lt 3 ]; then
-            echo "⏱️ Ждем 20 секунд..."
-            sleep 20
-          fi
-        done
+        echo "🤖 ЗАПУСК БОТА С ФИКСОМ ДЛЯ TELEGRAM"
+        echo "👉 Создаем файл с offset..."
+        
+        # Создаем файл для хранения последнего update_id
+        cat > bot_fixed.py << 'EOF'
+#!/usr/bin/env python3
+import os
+import telebot
+import gspread
+import json
+import re
+from datetime import datetime
+from google.oauth2.service_account import Credentials
+
+print("="*60)
+print("🤖 БОТ 'ДАНИЛА МАСТЕР' ЗАПУЩЕН")
+print("="*60)
+
+# Настройки
+BOT_TOKEN = "8133979508:AAERCJ0vygaJ-eSymRGEk1w5kzRZrp7SGi8"
+ADMIN_IDS = [5537549230]
+SPREADSHEET_ID = "1H6gkSXURYSWvXJFtjT8m7ESLvgFluOiR0g2wqrnz2MM"
+GOOGLE_CREDS_JSON = os.getenv("GOOGLE_CREDS_JSON", "")
+
+print("🔧 Проверка настроек:")
+print(f"   Токен бота: {'✅' if BOT_TOKEN else '❌'}")
+print(f"   Админы: {ADMIN_IDS}")
+print(f"   ID таблицы: ✅")
+print(f"   Google JSON: {'✅' if GOOGLE_CREDS_JSON else '❌'}")
+
+# Функция для получения offset
+def get_last_offset():
+    try:
+        with open('/tmp/last_offset.txt', 'r') as f:
+            return int(f.read().strip())
+    except:
+        return None
+
+# Функция для сохранения offset
+def save_last_offset(offset):
+    try:
+        with open('/tmp/last_offset.txt', 'w') as f:
+            f.write(str(offset))
+    except:
+        pass
+
+# Основная функция
+def main():
+    bot = telebot.TeleBot(BOT_TOKEN)
+    
+    # Получаем последний offset
+    last_offset = get_last_offset()
+    
+    print(f"📡 Получаем сообщения с offset: {last_offset}")
+    
+    try:
+        # Получаем обновления с правильным offset
+        updates = bot.get_updates(offset=last_offset, timeout=10)
+        print(f"📨 Получено {len(updates)} новых сообщений")
+        
+        if updates:
+            # Сохраняем новый offset
+            new_offset = updates[-1].update_id + 1
+            save_last_offset(new_offset)
+            print(f"💾 Сохранен новый offset: {new_offset}")
+            
+            # Обрабатываем сообщения
+            for update in updates:
+                if update.message and update.message.text:
+                    text = update.message.text.strip()
+                    user_id = update.message.from_user.id
+                    print(f"👤 Пользователь {user_id}: {text}")
+                    
+                    if user_id in ADMIN_IDS:
+                        bot.send_message(update.message.chat.id, 
+                            f"✅ Сообщение получено: {text}\n"
+                            f"📅 Дата: {datetime.now().strftime('%d.%m.%Y %H:%M')}")
+                    else:
+                        bot.send_message(update.message.chat.id, "❌ Доступ запрещен")
+        else:
+            print("📭 Новых сообщений нет")
+            
+    except Exception as e:
+        print(f"❌ Ошибка: {e}")
+
+if __name__ == "__main__":
+    main()
+EOF
+
+        echo "👉 Запускаем бота..."
+        python bot_fixed.py
