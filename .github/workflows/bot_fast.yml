@@ -2,84 +2,20 @@ name: Telegram Bot Fast
 
 on:
   schedule:
-    - cron: '*/1 * * * *'
+    - cron: '*/2 * * * *'
   workflow_dispatch:
 
 jobs:
-  fast-bot:
+  run-bot:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.9'
-      - name: Install dependencies
-        run: pip install pyTelegramBotAPI gspread google-auth
-      - name: Run bot
-        env:
-          GOOGLE_CREDS_JSON: ${{ secrets.GOOGLE_CREDS_JSON }}
-        run: |
-          echo "🤖 ЗАПУСК БОТА КАЖДУЮ МИНУТУ"
-          python -c "
-import os
-import telebot
-from datetime import datetime
-
-print('='*50)
-print('🤖 БОТ ДАНИЛА МАСТЕР ЗАПУЩЕН')
-print('='*50)
-
-BOT_TOKEN = '8133979508:AAERCJ0vygaJ-eSymRGEk1w5kzRZrp7SGi8'
-ADMIN_IDS = [5537549230]
-
-bot = telebot.TeleBot(BOT_TOKEN)
-
-def get_offset():
-    try:
-        if os.path.exists('/tmp/last_offset.txt'):
-            with open('/tmp/last_offset.txt', 'r') as f:
-                return int(f.read().strip())
-    except:
-        pass
-    return None
-
-def save_offset(offset):
-    try:
-        with open('/tmp/last_offset.txt', 'w') as f:
-            f.write(str(offset))
-    except:
-        pass
-
-offset = get_offset()
-print(f'📊 Offset: {offset}')
-
-try:
-    updates = bot.get_updates(offset=offset, timeout=5)
-    print(f'📨 Сообщений: {len(updates)}')
-    
-    if updates:
-        new_offset = updates[-1].update_id + 1
-        save_offset(new_offset)
-        
-        for update in updates:
-            if update.message and update.message.text:
-                msg = update.message
-                text = msg.text.strip()
-                user_id = msg.from_user.id
-                chat_id = msg.chat.id
-                
-                print(f'👤 User {user_id}: {text}')
-                
-                if user_id in ADMIN_IDS:
-                    if text == '/start':
-                        bot.send_message(chat_id, '🦷 *Бот Данила Мастер*\\n\\n✅ Сообщение получено!\\n📅 ' + datetime.now().strftime('%d.%m.%Y %H:%M'), parse_mode='Markdown')
-                    else:
-                        bot.send_message(chat_id, f'✅ Получено: {text}\\n🕐 {datetime.now().strftime("%H:%M:%S")}')
-                else:
-                    bot.send_message(chat_id, '❌ Доступ только для администратора')
-    
-    print('✅ Готово')
-    
-except Exception as e:
-    print(f'❌ Ошибка: {e}')
-          "
+    - uses: actions/checkout@v3
+    - uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    - name: Install dependencies
+      run: pip install pyTelegramBotAPI gspread google-auth
+    - name: Run bot
+      env:
+        GOOGLE_CREDS_JSON: ${{ secrets.GOOGLE_CREDS_JSON }}
+      run: python bot.py
